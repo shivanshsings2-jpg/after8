@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>After 8 — Urgent Stationery</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0D0F1A;
+    --surface:  #161827;
+    --card:     #1E2035;
+    --border:   #2A2D45;
+    --accent:   #FF6B35;
+    --accent-dim:#FF6B3520;
+    --green:    #2ECC71;
+    --green-dim:#2ECC7120;
+    --amber:    #F5C842;
+    --amber-dim:#F5C84220;
+    --red:      #FF4560;
+    --red-dim:  #FF456020;
+    --text:     #F0EDE6;
+    --muted:    #8B8FA8;
+    --mono:     'Space Grotesk', monospace;
+    --radius:   12px;
+  }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh;
+    overscroll-behavior: none;
+  }
+
+  /* ── Header ── */
+  .header {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 16px;
+  }
+  .header-top { display: flex; align-items: center; justify-content: space-between; }
+  .brand-name { font-size: 17px; font-weight: 700; letter-spacing: -.3px; }
+  .brand-sub  { font-size: 11px; color: var(--muted); margin-top: 2px; font-weight: 400; }
+
+  .cart-btn {
+    position: relative; background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px 12px; cursor: pointer;
+    display: flex; align-items: center; gap: 6px; color: var(--text); font-size: 13px;
+    font-family: var(--mono); font-weight: 600;
+  }
+  .cart-badge {
+    position: absolute; top: -6px; right: -6px;
+    background: var(--accent); color: #fff; font-size: 10px; font-weight: 700;
+    border-radius: 50%; width: 18px; height: 18px;
+    display: none; align-items: center; justify-content: center;
+  }
+  .cart-badge.visible { display: flex; }
+
+  /* ── Stock ticker — Signature element ── */
+  .stock-ticker {
+    margin-top: 12px; overflow: hidden;
+    border: 1px solid var(--border); border-radius: 8px;
+    display: flex; align-items: center;
+    background: var(--surface);
+  }
+  .ticker-label {
+    background: var(--accent); color: #fff; font-size: 10px; font-weight: 700;
+    padding: 6px 10px; white-space: nowrap; text-transform: uppercase; letter-spacing: .8px;
+    flex-shrink: 0;
+  }
+  .ticker-scroll {
+    flex: 1; overflow: hidden; padding: 0 12px;
+  }
+  .ticker-inner {
+    display: flex; gap: 24px; animation: ticker 18s linear infinite; width: max-content;
+  }
+  @keyframes ticker { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+  .ticker-item { font-size: 11px; color: var(--muted); white-space: nowrap; font-weight: 500; }
+  .ticker-item span { color: var(--green); font-weight: 700; }
+  .ticker-item.low span { color: var(--amber); }
+  .ticker-item.out span { color: var(--red); }
+
+  /* ── Search ── */
+  .search-wrap { padding: 14px 16px 0; }
+  .search-input {
+    width: 100%; background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 14px 10px 38px;
+    color: var(--text); font-size: 14px; font-family: var(--mono);
+    outline: none; transition: border-color .2s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%238B8FA8' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.099zm-5.242 1.656a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: 12px center;
+  }
+  .search-input:focus { border-color: var(--accent); }
+
+  /* ── Category tabs ── */
+  .tabs { display: flex; gap: 8px; padding: 14px 16px 0; overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex-shrink: 0; padding: 5px 13px; border-radius: 20px; font-size: 12px;
+    font-weight: 600; cursor: pointer; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); transition: all .2s;
+    font-family: var(--mono);
+  }
+  .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* ── Product list ── */
+  .section-label {
+    padding: 16px 16px 8px;
+    font-size: 10px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .product-list { display: flex; flex-direction: column; gap: 8px; padding: 0 16px; }
+
+  .item-row {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 12px 14px; display: flex; align-items: center; gap: 12px;
+    transition: border-color .2s;
+  }
+  .item-row.in-cart { border-color: var(--accent); }
+
+  .item-icon { font-size: 26px; width: 42px; text-align: center; flex-shrink: 0; }
+
+  .item-info { flex: 1; min-width: 0; }
+  .item-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+  .item-price { font-size: 15px; font-weight: 700; color: var(--accent); font-family: var(--mono); }
+  .item-unit  { font-size: 11px; color: var(--muted); }
+
+  /* ── Stock badge — Signature element ── */
+  .stock-badge {
+    font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 5px;
+    text-transform: uppercase; letter-spacing: .5px; font-family: var(--mono);
+  }
+  .stock-in   { background: var(--green-dim); color: var(--green); }
+  .stock-low  { background: var(--amber-dim); color: var(--amber); animation: blink 1.4s ease-in-out infinite; }
+  .stock-out  { background: var(--red-dim);   color: var(--red); }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* ── Qty control ── */
+  .item-actions { flex-shrink: 0; display: flex; align-items: center; }
+  .add-btn {
+    width: 32px; height: 32px; border-radius: 9px;
+    background: var(--accent); border: none; color: #fff;
+    font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: opacity .15s;
+  }
+  .add-btn:disabled { opacity: .35; cursor: not-allowed; }
+  .qty-ctrl { display: flex; align-items: center; gap: 8px; }
+  .qty-btn {
+    width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text); font-size: 16px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .qty-num { font-family: var(--mono); font-size: 15px; font-weight: 700; min-width: 18px; text-align: center; }
+
+  /* ── Empty state ── */
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
+  .empty-state-icon { font-size: 44px; margin-bottom: 12px; }
+
+  /* ── Float bar ── */
+  .float-bar {
+    position: fixed; bottom: 16px; left: 16px; right: 16px; z-index: 150;
+    background: var(--accent); border-radius: 13px;
+    padding: 13px 18px; display: flex; align-items: center; justify-content: space-between;
+    transform: translateY(120px); transition: transform .3s cubic-bezier(.32,1,.24,1);
+    box-shadow: 0 8px 32px #FF6B3544;
+  }
+  .float-bar.visible { transform: translateY(0); }
+  .float-bar-left { display: flex; flex-direction: column; }
+  .float-bar-items { font-size: 11px; opacity: .85; }
+  .float-bar-total { font-size: 17px; font-weight: 700; font-family: var(--mono); }
+  .float-bar-btn {
+    background: #fff; color: var(--accent); border: none; border-radius: 9px;
+    padding: 8px 15px; font-weight: 700; font-size: 13px; cursor: pointer;
+    font-family: var(--mono);
+  }
+
+  /* ── Drawer ── */
+  .drawer-overlay {
+    position: fixed; inset: 0; background: #00000088; z-index: 200;
+    opacity: 0; pointer-events: none; transition: opacity .25s;
+  }
+  .drawer-overlay.open { opacity: 1; pointer-events: all; }
+  .drawer {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 201;
+    background: var(--surface); border-radius: 20px 20px 0 0;
+    border-top: 1px solid var(--border);
+    transform: translateY(100%); transition: transform .3s cubic-bezier(.32,1,.24,1);
+    max-height: 80vh; display: flex; flex-direction: column;
+    padding-bottom: env(safe-area-inset-bottom, 16px);
+  }
+  .drawer.open { transform: translateY(0); }
+  .drawer-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto 0; }
+  .drawer-header {
+    padding: 14px 16px 12px; font-size: 17px; font-weight: 700;
+    border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;
+  }
+  .drawer-items { overflow-y: auto; flex: 1; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+
+  .cart-row { display: flex; align-items: center; gap: 10px; }
+  .cart-row-icon { font-size: 24px; width: 40px; height: 40px; background: var(--card); border-radius: 9px; display: flex; align-items: center; justify-content: center; }
+  .cart-row-info { flex: 1; }
+  .cart-row-name  { font-size: 13px; font-weight: 600; }
+  .cart-row-price { font-size: 12px; color: var(--muted); margin-top: 2px; font-family: var(--mono); }
+  .cart-row-remove { background: none; border: none; color: var(--red); font-size: 16px; cursor: pointer; padding: 4px; }
+
+  .form-section { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
+  .form-label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 5px; }
+  .form-input {
+    width: 100%; background: var(--card); border: 1px solid var(--border);
+    border-radius: 9px; padding: 10px 13px; color: var(--text); font-size: 14px;
+    font-family: var(--mono); outline: none; transition: border-color .2s;
+  }
+  .form-input:focus { border-color: var(--accent); }
+
+  .drawer-footer { padding: 12px 16px; border-top: 1px solid var(--border); }
+  .total-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .total-label { font-size: 13px; color: var(--muted); }
+  .total-amount { font-size: 20px; font-weight: 700; font-family: var(--mono); color: var(--accent); }
+  .checkout-btn {
+    width: 100%; padding: 13px; border-radius: 11px; border: none;
+    background: var(--accent); color: #fff; font-size: 15px; font-weight: 700;
+    cursor: pointer; font-family: var(--mono);
+  }
+  .checkout-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+  .empty-cart { text-align: center; padding: 30px 20px; color: var(--muted); }
+
+  .bottom-space { height: 100px; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-top">
+    <div>
+      <div class="brand-name">After 8 ✏️ Stationery</div>
+      <div class="brand-sub">Emergency supplies · In-room stock · Instant delivery</div>
+    </div>
+    <button class="cart-btn" onclick="openDrawer()">
+      🧺 Cart
+      <span class="cart-badge" id="cartBadge">0</span>
+    </button>
+  </div>
+
+  <!-- Live Stock Ticker — Signature Element -->
+  <div class="stock-ticker">
+    <div class="ticker-label">📦 Stock</div>
+    <div class="ticker-scroll">
+      <div class="ticker-inner" id="tickerInner"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Search -->
+<div class="search-wrap">
+  <input class="search-input" id="searchInput" type="text" placeholder="Search items..." oninput="renderProducts()"/>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab active" onclick="filterCat('all',this)">All</button>
+  <button class="tab" onclick="filterCat('paper',this)">Paper</button>
+  <button class="tab" onclick="filterCat('writing',this)">Writing</button>
+  <button class="tab" onclick="filterCat('drawing',this)">Drawing</button>
+  <button class="tab" onclick="filterCat('misc',this)">Misc</button>
+</div>
+
+<!-- Product list -->
+<div class="section-label" id="sectionLabel">ALL ITEMS</div>
+<div class="product-list" id="productList"></div>
+
+<div class="bottom-space"></div>
+
+<!-- Float bar -->
+<div class="float-bar" id="floatBar">
+  <div class="float-bar-left">
+    <span class="float-bar-items" id="floatItems">0 items</span>
+    <span class="float-bar-total" id="floatTotal">₹0</span>
+  </div>
+  <button class="float-bar-btn" onclick="openDrawer()">Checkout →</button>
+</div>
+
+<!-- Drawer overlay -->
+<div class="drawer-overlay" id="overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-header">
+    <span>Your Order</span>
+    <span id="drawerCount" style="font-size:13px;color:var(--muted);font-weight:500"></span>
+  </div>
+  <div class="drawer-items" id="drawerItems"></div>
+
+  <div class="form-section">
+    <div>
+      <div class="form-label">Room Number *</div>
+      <input class="form-input" id="roomNumber" type="text" placeholder="e.g. B-112" maxlength="10"/>
+    </div>
+    <div>
+      <div class="form-label">Notes (optional)</div>
+      <input class="form-input" id="notes" type="text" placeholder="e.g. Need before 9 PM for lab"/>
+    </div>
+  </div>
+
+  <div class="drawer-footer">
+    <div class="total-row">
+      <span class="total-label">Total (incl. ₹10 delivery)</span>
+      <span class="total-amount" id="drawerTotal">₹0</span>
+    </div>
+    <button class="checkout-btn" id="checkoutBtn" onclick="checkout()">Pay via UPI →</button>
+  </div>
+</div>
+
+<script>
+// ── Catalogue ─────────────────────────────────────────────────────────────────
+const PRODUCTS = [
+  // Paper
+  { id:"s1",  name:"A4 Sheets",            unit:"per 10",  price:5,  emoji:"📄", category:"paper",   stock:48, max:50 },
+  { id:"s2",  name:"Graph Paper",          unit:"per 5",   price:8,  emoji:"📊", category:"paper",   stock:12, max:30 },
+  { id:"s3",  name:"Ruled Notebook",       unit:"1 book",  price:40, emoji:"📓", category:"paper",   stock:6,  max:20 },
+  { id:"s4",  name:"Lab Record Book",      unit:"1 book",  price:55, emoji:"📒", category:"paper",   stock:3,  max:15 },
+  // Writing
+  { id:"s5",  name:"Black Ball Pen",       unit:"1 pc",    price:10, emoji:"🖊️", category:"writing", stock:35, max:50 },
+  { id:"s6",  name:"Blue Ball Pen",        unit:"1 pc",    price:10, emoji:"🖊️", category:"writing", stock:28, max:50 },
+  { id:"s7",  name:"Pencil HB",            unit:"1 pc",    price:5,  emoji:"✏️", category:"writing", stock:20, max:40 },
+  { id:"s8",  name:"Eraser",               unit:"1 pc",    price:5,  emoji:"🧹", category:"writing", stock:15, max:30 },
+  { id:"s9",  name:"Whitener / Tipp-Ex",   unit:"1 pc",    price:20, emoji:"🪣", category:"writing", stock:4,  max:15 },
+  { id:"s10", name:"Highlighter (Yellow)", unit:"1 pc",    price:25, emoji:"🖍️", category:"writing", stock:0,  max:20 },
+  // Drawing
+  { id:"s11", name:"Engineering Drafter",  unit:"1 pc",    price:40, emoji:"📐", category:"drawing", stock:5,  max:10 },
+  { id:"s12", name:"Compass Set",          unit:"1 set",   price:60, emoji:"🔭", category:"drawing", stock:3,  max:8  },
+  { id:"s13", name:"Drawing Sheets",       unit:"per 5",   price:15, emoji:"🗂️", category:"drawing", stock:22, max:40 },
+  { id:"s14", name:"Sketch Pens (12 clr)", unit:"1 set",   price:45, emoji:"🎨", category:"drawing", stock:7,  max:15 },
+  // Misc
+  { id:"s15", name:"Stapler + Pins",       unit:"1 set",   price:35, emoji:"📎", category:"misc",    stock:2,  max:8  },
+  { id:"s16", name:"Scissors",             unit:"1 pc",    price:30, emoji:"✂️", category:"misc",    stock:4,  max:10 },
+  { id:"s17", name:"Sticky Notes",         unit:"1 pad",   price:20, emoji:"📌", category:"misc",    stock:9,  max:20 },
+  { id:"s18", name:"Fevicol Glue Stick",   unit:"1 pc",    price:15, emoji:"🧴", category:"misc",    stock:11, max:20 },
+];
+
+const DELIVERY_FEE = 10;
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let cart = {};
+let currentCat = "all";
+
+// ── Telegram ──────────────────────────────────────────────────────────────────
+const tg = window.Telegram?.WebApp;
+if (tg) { tg.ready(); tg.expand(); tg.BackButton.show(); tg.BackButton.onClick(() => tg.close()); }
+
+// ── Stock helpers ─────────────────────────────────────────────────────────────
+function stockStatus(p) {
+  if (p.stock === 0) return { label:"Out of stock", cls:"stock-out" };
+  const pct = p.stock / p.max;
+  if (pct <= 0.2) return { label:`Only ${p.stock} left`, cls:"stock-low" };
+  return { label:`In stock`, cls:"stock-in" };
+}
+
+// ── Ticker ────────────────────────────────────────────────────────────────────
+function buildTicker() {
+  const items = PRODUCTS.map(p => {
+    const s = stockStatus(p);
+    return `<span class="ticker-item ${s.cls === "stock-low" ? "low" : s.cls === "stock-out" ? "out" : ""}">
+      ${p.emoji} ${p.name} — <span>${s.label}</span>
+    </span>`;
+  }).join("");
+  // Duplicate for seamless loop
+  document.getElementById("tickerInner").innerHTML = items + items;
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderProducts() {
+  const q   = document.getElementById("searchInput").value.toLowerCase();
+  const list = document.getElementById("productList");
+
+  let filtered = PRODUCTS.filter(p =>
+    (currentCat === "all" || p.category === currentCat) &&
+    (!q || p.name.toLowerCase().includes(q))
+  );
+
+  document.getElementById("sectionLabel").textContent =
+    filtered.length + " item" + (filtered.length !== 1 ? "s" : "");
+
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🔍</div><div>Nothing found.<br/>Try a different search.</div></div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(p => {
+    const s   = stockStatus(p);
+    const qty = cart[p.id] || 0;
+    const out = p.stock === 0;
+    return `
+    <div class="item-row ${qty > 0 ? "in-cart" : ""}">
+      <div class="item-icon">${p.emoji}</div>
+      <div class="item-info">
+        <div class="item-name">${p.name}</div>
+        <div class="item-meta">
+          <span class="item-price">₹${p.price}</span>
+          <span class="item-unit">${p.unit}</span>
+          <span class="stock-badge ${s.cls}">${s.label}</span>
+        </div>
+      </div>
+      <div class="item-actions">
+        ${out
+          ? `<span style="font-size:11px;color:var(--red)">Unavailable</span>`
+          : qty === 0
+            ? `<button class="add-btn" onclick="addToCart('${p.id}')">+</button>`
+            : `<div class="qty-ctrl">
+                 <button class="qty-btn" onclick="changeQty('${p.id}',-1)">−</button>
+                 <span class="qty-num">${qty}</span>
+                 <button class="qty-btn" onclick="changeQty('${p.id}',1)">+</button>
+               </div>`
+        }
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function filterCat(cat, btn) {
+  currentCat = cat;
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  btn.classList.add("active");
+  renderProducts();
+}
+
+// ── Cart ──────────────────────────────────────────────────────────────────────
+function addToCart(id) { cart[id] = 1; updateUI(); }
+
+function changeQty(id, delta) {
+  cart[id] = (cart[id] || 0) + delta;
+  if (cart[id] <= 0) delete cart[id];
+  updateUI();
+}
+
+function cartTotal() {
+  let t = 0;
+  for (const [id, qty] of Object.entries(cart)) {
+    const p = PRODUCTS.find(x => x.id === id);
+    if (p) t += p.price * qty;
+  }
+  if (Object.keys(cart).length > 0) t += DELIVERY_FEE;
+  return t;
+}
+
+function cartCount() { return Object.values(cart).reduce((s,v)=>s+v,0); }
+
+function updateUI() {
+  renderProducts();
+  const count = cartCount();
+  const total = cartTotal();
+
+  // Badge
+  const badge = document.getElementById("cartBadge");
+  badge.textContent = count;
+  count > 0 ? badge.classList.add("visible") : badge.classList.remove("visible");
+
+  // Float bar
+  const bar = document.getElementById("floatBar");
+  document.getElementById("floatItems").textContent = `${count} item${count!==1?"s":""}`;
+  document.getElementById("floatTotal").textContent = `₹${total}`;
+  count > 0 ? bar.classList.add("visible") : bar.classList.remove("visible");
+
+  if (document.getElementById("drawer").classList.contains("open")) renderDrawer();
+}
+
+// ── Drawer ────────────────────────────────────────────────────────────────────
+function openDrawer() {
+  renderDrawer();
+  document.getElementById("drawer").classList.add("open");
+  document.getElementById("overlay").classList.add("open");
+}
+function closeDrawer() {
+  document.getElementById("drawer").classList.remove("open");
+  document.getElementById("overlay").classList.remove("open");
+}
+
+function renderDrawer() {
+  const items = Object.entries(cart).map(([id, qty]) => {
+    const p = PRODUCTS.find(x => x.id === id);
+    return p ? { ...p, qty } : null;
+  }).filter(Boolean);
+
+  const count = cartCount();
+  document.getElementById("drawerCount").textContent = count ? `${count} item${count!==1?"s":""}` : "";
+
+  const container = document.getElementById("drawerItems");
+  if (items.length === 0) {
+    container.innerHTML = `<div class="empty-cart"><div style="font-size:40px">🧺</div><div style="margin-top:10px">Cart is empty.<br/>Add items above.</div></div>`;
+  } else {
+    container.innerHTML = items.map(item => `
+      <div class="cart-row">
+        <div class="cart-row-icon">${item.emoji}</div>
+        <div class="cart-row-info">
+          <div class="cart-row-name">${item.name}</div>
+          <div class="cart-row-price">${item.qty} × ₹${item.price} = ₹${item.qty * item.price}</div>
+        </div>
+        <button class="cart-row-remove" onclick="changeQty('${item.id}',-99)">✕</button>
+      </div>
+    `).join("") + `
+      <div class="cart-row" style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px">
+        <div class="cart-row-icon">🛵</div>
+        <div class="cart-row-info"><div class="cart-row-name">Delivery</div><div class="cart-row-price">Flat fee</div></div>
+        <span style="font-family:var(--mono);font-size:14px;color:var(--muted)">₹${DELIVERY_FEE}</span>
+      </div>`;
+  }
+
+  document.getElementById("drawerTotal").textContent = `₹${cartTotal()}`;
+  document.getElementById("checkoutBtn").disabled = count === 0;
+}
+
+// ── Checkout ──────────────────────────────────────────────────────────────────
+function checkout() {
+  const room  = document.getElementById("roomNumber").value.trim();
+  const notes = document.getElementById("notes").value.trim();
+  if (!room) { alert("Please enter your room number."); return; }
+
+  const orderItems = Object.entries(cart).map(([id, qty]) => {
+    const p = PRODUCTS.find(x => x.id === id);
+    return { id, name: p.name, unit: p.unit, qty, price: p.price };
+  });
+
+  const payload = {
+    service:      "stationery",
+    room,
+    notes,
+    items:        orderItems,
+    total:        cartTotal(),
+    delivery_fee: DELIVERY_FEE,
+    timestamp:    new Date().toISOString(),
+  };
+
+  if (tg) {
+    tg.sendData(JSON.stringify(payload));
+  } else {
+    alert("Order JSON:\n" + JSON.stringify(payload, null, 2));
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+buildTicker();
+renderProducts();
+</script>
+</body>
+</html>
